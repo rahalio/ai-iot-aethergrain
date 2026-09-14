@@ -1,0 +1,854 @@
+openapi: 3.0.3
+info:
+  title: AetherGrain
+  version: 0.1.0
+  description: Gateway-side RF-PUF authenticator using transmitter LO offset and I-Q imbalance signatures
+    with enrollment, alerts, and multi-factor policy.
+  x-product-slug: ai-iot-aethergrain
+  x-source: ai-in-iot/1805.01374/
+servers:
+- url: https://api.example.com
+tags:
+- name: Devices
+  description: Transmitter inventory binding
+- name: Enrollments
+  description: Controlled RF profile capture
+- name: Profiles
+  description: Active RF signature profiles
+- name: AuthDecisions
+  description: Allow deny unknown scoring
+- name: Alerts
+  description: Unknown transmitter and Rx faults
+- name: Gateways
+  description: Receiver hubs and migration
+- name: Policies
+  description: Stand-alone vs multi-factor
+- name: Audit
+  description: Decision evidence
+paths:
+  /v1/devices:
+    get:
+      operationId: listRfDevices
+      tags:
+      - Devices
+      security:
+      - BearerAuth: []
+      parameters:
+      - $ref: '#/components/parameters/Cursor'
+      - $ref: '#/components/parameters/Limit'
+      responses:
+        '200':
+          description: Devices
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ListEnvelopeDevice'
+    post:
+      operationId: registerRfDevice
+      tags:
+      - Devices
+      security:
+      - BearerAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/DeviceCreate'
+      responses:
+        '201':
+          description: Created
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/DataEnvelopeDevice'
+  /v1/enrollments:
+    post:
+      operationId: startEnrollment
+      tags:
+      - Enrollments
+      security:
+      - BearerAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/EnrollmentStart'
+      responses:
+        '201':
+          description: Started
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/DataEnvelopeEnrollmentSession'
+    get:
+      operationId: listEnrollments
+      tags:
+      - Enrollments
+      security:
+      - BearerAuth: []
+      parameters:
+      - $ref: '#/components/parameters/Cursor'
+      - $ref: '#/components/parameters/Limit'
+      responses:
+        '200':
+          description: Enrollments
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ListEnvelopeEnrollmentSession'
+  /v1/enrollments/{enrollmentId}/approve:
+    parameters:
+    - $ref: '#/components/parameters/EnrollmentId'
+    post:
+      operationId: approveEnrollment
+      tags:
+      - Enrollments
+      security:
+      - BearerAuth: []
+      responses:
+        '200':
+          description: Approved profile
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/DataEnvelopeRfProfile'
+  /v1/profiles:
+    get:
+      operationId: listRfProfiles
+      tags:
+      - Profiles
+      security:
+      - BearerAuth: []
+      parameters:
+      - $ref: '#/components/parameters/Cursor'
+      - $ref: '#/components/parameters/Limit'
+      responses:
+        '200':
+          description: Profiles
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ListEnvelopeRfProfile'
+  /v1/auth/decisions:
+    post:
+      operationId: evaluateAuth
+      tags:
+      - AuthDecisions
+      security:
+      - ApiKeyAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/AuthEvaluate'
+      responses:
+        '200':
+          description: Decision
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/DataEnvelopeAuthDecision'
+    get:
+      operationId: listAuthDecisions
+      tags:
+      - AuthDecisions
+      security:
+      - BearerAuth: []
+      parameters:
+      - $ref: '#/components/parameters/Cursor'
+      - $ref: '#/components/parameters/Limit'
+      responses:
+        '200':
+          description: Decisions
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ListEnvelopeAuthDecision'
+  /v1/alerts:
+    get:
+      operationId: listRfAlerts
+      tags:
+      - Alerts
+      security:
+      - BearerAuth: []
+      parameters:
+      - $ref: '#/components/parameters/Cursor'
+      - $ref: '#/components/parameters/Limit'
+      responses:
+        '200':
+          description: Alerts
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ListEnvelopeAlert'
+  /v1/gateways:
+    get:
+      operationId: listGateways
+      tags:
+      - Gateways
+      security:
+      - BearerAuth: []
+      parameters:
+      - $ref: '#/components/parameters/Cursor'
+      - $ref: '#/components/parameters/Limit'
+      responses:
+        '200':
+          description: Gateways
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ListEnvelopeGateway'
+    post:
+      operationId: registerGateway
+      tags:
+      - Gateways
+      security:
+      - BearerAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/GatewayRegister'
+      responses:
+        '201':
+          description: Registered
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/DataEnvelopeGateway'
+  /v1/gateways/{gatewayId}/migrate-profiles:
+    parameters:
+    - $ref: '#/components/parameters/GatewayId'
+    post:
+      operationId: migrateGatewayProfiles
+      tags:
+      - Gateways
+      security:
+      - BearerAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required:
+              - targetGatewayId
+              properties:
+                targetGatewayId:
+                  type: string
+                dualControlToken:
+                  type: string
+      responses:
+        '202':
+          description: Migration accepted
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/DataEnvelopeGateway'
+  /v1/policies/factors:
+    get:
+      operationId: listFactorPolicies
+      tags:
+      - Policies
+      security:
+      - BearerAuth: []
+      responses:
+        '200':
+          description: Policies
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ListEnvelopeFactorPolicy'
+    put:
+      operationId: upsertFactorPolicy
+      tags:
+      - Policies
+      security:
+      - BearerAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/FactorPolicyUpsert'
+      responses:
+        '200':
+          description: Upserted
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/DataEnvelopeFactorPolicy'
+  /v1/audit/events:
+    get:
+      operationId: listRfAuditEvents
+      tags:
+      - Audit
+      security:
+      - BearerAuth: []
+      parameters:
+      - $ref: '#/components/parameters/Cursor'
+      - $ref: '#/components/parameters/Limit'
+      responses:
+        '200':
+          description: Audit
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ListEnvelopeAuditEvent'
+components:
+  securitySchemes:
+    ApiKeyAuth:
+      type: apiKey
+      in: header
+      name: X-API-Key
+    BearerAuth:
+      type: http
+      scheme: bearer
+      bearerFormat: JWT
+  parameters:
+    Cursor:
+      name: cursor
+      in: query
+      schema:
+        type: string
+    Limit:
+      name: limit
+      in: query
+      schema:
+        type: integer
+        minimum: 1
+        maximum: 200
+        default: 50
+    EnrollmentId:
+      name: enrollmentId
+      in: path
+      required: true
+      schema:
+        type: string
+    GatewayId:
+      name: gatewayId
+      in: path
+      required: true
+      schema:
+        type: string
+  responses:
+    Unauthorized:
+      description: Missing or invalid credentials
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/Problem'
+    NotFound:
+      description: Resource not found
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/Problem'
+    UnprocessableEntity:
+      description: Validation failed
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/Problem'
+  schemas:
+    ResponseMeta:
+      type: object
+      required:
+      - requestId
+      - timestamp
+      properties:
+        requestId:
+          type: string
+        timestamp:
+          type: string
+          format: date-time
+    Problem:
+      type: object
+      required:
+      - type
+      - title
+      - status
+      properties:
+        type:
+          type: string
+          format: uri
+        title:
+          type: string
+        status:
+          type: integer
+        detail:
+          type: string
+    Device:
+      type: object
+      required:
+      - id
+      - inventoryId
+      - status
+      properties:
+        id:
+          type: string
+        inventoryId:
+          type: string
+        status:
+          type: string
+          enum:
+          - pending_enrollment
+          - enrolled
+          - disabled
+        gatewayId:
+          type: string
+    DeviceCreate:
+      type: object
+      required:
+      - inventoryId
+      - gatewayId
+      properties:
+        inventoryId:
+          type: string
+        gatewayId:
+          type: string
+        label:
+          type: string
+    EnrollmentSession:
+      type: object
+      required:
+      - id
+      - deviceId
+      - status
+      properties:
+        id:
+          type: string
+        deviceId:
+          type: string
+        status:
+          type: string
+          enum:
+          - open
+          - captured
+          - approved
+          - rejected
+        sampleCount:
+          type: integer
+    EnrollmentStart:
+      type: object
+      required:
+      - deviceId
+      properties:
+        deviceId:
+          type: string
+        controlledChannel:
+          type: boolean
+          default: true
+    RfProfile:
+      type: object
+      required:
+      - id
+      - deviceId
+      - version
+      - status
+      properties:
+        id:
+          type: string
+        deviceId:
+          type: string
+        version:
+          type: integer
+        status:
+          type: string
+          enum:
+          - active
+          - superseded
+          - revoked
+        featureSummary:
+          type: object
+          additionalProperties:
+            type: number
+            format: float
+    AuthDecision:
+      type: object
+      required:
+      - id
+      - gatewayId
+      - outcome
+      - confidence
+      - decidedAt
+      properties:
+        id:
+          type: string
+        gatewayId:
+          type: string
+        deviceId:
+          type: string
+        outcome:
+          type: string
+          enum:
+          - allow
+          - deny
+          - unknown
+          - low_confidence
+        confidence:
+          type: number
+          format: float
+        reasonCode:
+          type: string
+        decidedAt:
+          type: string
+          format: date-time
+    AuthEvaluate:
+      type: object
+      required:
+      - gatewayId
+      - features
+      properties:
+        gatewayId:
+          type: string
+        features:
+          type: object
+          additionalProperties:
+            type: number
+            format: float
+          description: LO offset, I-Q imbalance, related impairments
+        transmissionId:
+          type: string
+    Alert:
+      type: object
+      required:
+      - id
+      - type
+      - status
+      - createdAt
+      properties:
+        id:
+          type: string
+        type:
+          type: string
+          enum:
+          - unknown_transmitter
+          - low_confidence_burst
+          - rx_compensation_fault
+        status:
+          type: string
+          enum:
+          - open
+          - acknowledged
+          - closed
+        createdAt:
+          type: string
+          format: date-time
+        gatewayId:
+          type: string
+    Gateway:
+      type: object
+      required:
+      - id
+      - name
+      - status
+      properties:
+        id:
+          type: string
+        name:
+          type: string
+        status:
+          type: string
+          enum:
+          - online
+          - degraded
+          - offline
+        rxCompensationHealthy:
+          type: boolean
+    GatewayRegister:
+      type: object
+      required:
+      - name
+      properties:
+        name:
+          type: string
+        siteId:
+          type: string
+    FactorPolicy:
+      type: object
+      required:
+      - id
+      - deviceClass
+      - mode
+      properties:
+        id:
+          type: string
+        deviceClass:
+          type: string
+        mode:
+          type: string
+          enum:
+          - rf_only
+          - multi_factor_required
+        minConfidence:
+          type: number
+          format: float
+    FactorPolicyUpsert:
+      type: object
+      required:
+      - deviceClass
+      - mode
+      properties:
+        deviceClass:
+          type: string
+        mode:
+          type: string
+          enum:
+          - rf_only
+          - multi_factor_required
+        minConfidence:
+          type: number
+          format: float
+    AuditEvent:
+      type: object
+      required:
+      - id
+      - action
+      - occurredAt
+      properties:
+        id:
+          type: string
+        action:
+          type: string
+        occurredAt:
+          type: string
+          format: date-time
+        detail:
+          type: string
+    DataEnvelopeDevice:
+      type: object
+      required:
+      - data
+      - meta
+      properties:
+        data:
+          $ref: '#/components/schemas/Device'
+        meta:
+          $ref: '#/components/schemas/ResponseMeta'
+    ListEnvelopeDevice:
+      type: object
+      required:
+      - data
+      - meta
+      properties:
+        data:
+          type: object
+          required:
+          - items
+          properties:
+            items:
+              type: array
+              items:
+                $ref: '#/components/schemas/Device'
+            nextCursor:
+              type: string
+        meta:
+          $ref: '#/components/schemas/ResponseMeta'
+    DataEnvelopeEnrollmentSession:
+      type: object
+      required:
+      - data
+      - meta
+      properties:
+        data:
+          $ref: '#/components/schemas/EnrollmentSession'
+        meta:
+          $ref: '#/components/schemas/ResponseMeta'
+    ListEnvelopeEnrollmentSession:
+      type: object
+      required:
+      - data
+      - meta
+      properties:
+        data:
+          type: object
+          required:
+          - items
+          properties:
+            items:
+              type: array
+              items:
+                $ref: '#/components/schemas/EnrollmentSession'
+            nextCursor:
+              type: string
+        meta:
+          $ref: '#/components/schemas/ResponseMeta'
+    DataEnvelopeRfProfile:
+      type: object
+      required:
+      - data
+      - meta
+      properties:
+        data:
+          $ref: '#/components/schemas/RfProfile'
+        meta:
+          $ref: '#/components/schemas/ResponseMeta'
+    ListEnvelopeRfProfile:
+      type: object
+      required:
+      - data
+      - meta
+      properties:
+        data:
+          type: object
+          required:
+          - items
+          properties:
+            items:
+              type: array
+              items:
+                $ref: '#/components/schemas/RfProfile'
+            nextCursor:
+              type: string
+        meta:
+          $ref: '#/components/schemas/ResponseMeta'
+    DataEnvelopeAuthDecision:
+      type: object
+      required:
+      - data
+      - meta
+      properties:
+        data:
+          $ref: '#/components/schemas/AuthDecision'
+        meta:
+          $ref: '#/components/schemas/ResponseMeta'
+    ListEnvelopeAuthDecision:
+      type: object
+      required:
+      - data
+      - meta
+      properties:
+        data:
+          type: object
+          required:
+          - items
+          properties:
+            items:
+              type: array
+              items:
+                $ref: '#/components/schemas/AuthDecision'
+            nextCursor:
+              type: string
+        meta:
+          $ref: '#/components/schemas/ResponseMeta'
+    DataEnvelopeAlert:
+      type: object
+      required:
+      - data
+      - meta
+      properties:
+        data:
+          $ref: '#/components/schemas/Alert'
+        meta:
+          $ref: '#/components/schemas/ResponseMeta'
+    ListEnvelopeAlert:
+      type: object
+      required:
+      - data
+      - meta
+      properties:
+        data:
+          type: object
+          required:
+          - items
+          properties:
+            items:
+              type: array
+              items:
+                $ref: '#/components/schemas/Alert'
+            nextCursor:
+              type: string
+        meta:
+          $ref: '#/components/schemas/ResponseMeta'
+    DataEnvelopeGateway:
+      type: object
+      required:
+      - data
+      - meta
+      properties:
+        data:
+          $ref: '#/components/schemas/Gateway'
+        meta:
+          $ref: '#/components/schemas/ResponseMeta'
+    ListEnvelopeGateway:
+      type: object
+      required:
+      - data
+      - meta
+      properties:
+        data:
+          type: object
+          required:
+          - items
+          properties:
+            items:
+              type: array
+              items:
+                $ref: '#/components/schemas/Gateway'
+            nextCursor:
+              type: string
+        meta:
+          $ref: '#/components/schemas/ResponseMeta'
+    DataEnvelopeFactorPolicy:
+      type: object
+      required:
+      - data
+      - meta
+      properties:
+        data:
+          $ref: '#/components/schemas/FactorPolicy'
+        meta:
+          $ref: '#/components/schemas/ResponseMeta'
+    ListEnvelopeFactorPolicy:
+      type: object
+      required:
+      - data
+      - meta
+      properties:
+        data:
+          type: object
+          required:
+          - items
+          properties:
+            items:
+              type: array
+              items:
+                $ref: '#/components/schemas/FactorPolicy'
+            nextCursor:
+              type: string
+        meta:
+          $ref: '#/components/schemas/ResponseMeta'
+    DataEnvelopeAuditEvent:
+      type: object
+      required:
+      - data
+      - meta
+      properties:
+        data:
+          $ref: '#/components/schemas/AuditEvent'
+        meta:
+          $ref: '#/components/schemas/ResponseMeta'
+    ListEnvelopeAuditEvent:
+      type: object
+      required:
+      - data
+      - meta
+      properties:
+        data:
+          type: object
+          required:
+          - items
+          properties:
+            items:
+              type: array
+              items:
+                $ref: '#/components/schemas/AuditEvent'
+            nextCursor:
+              type: string
+        meta:
+          $ref: '#/components/schemas/ResponseMeta'
